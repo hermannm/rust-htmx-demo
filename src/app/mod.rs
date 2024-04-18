@@ -56,7 +56,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
     html! {
         head {
             title { "Rust HTMX Demo App" }
-            script src="https://unpkg.com/htmx.org@1.9.12" {}
+            script src="/static/htmx-1.9.12.js" {}
             link rel="stylesheet" href="/static/styles.css";
         }
         body class="max-w-3xl mx-auto my-5 bg-slate-300" {
