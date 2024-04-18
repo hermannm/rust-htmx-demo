@@ -584,8 +584,8 @@ video {
   display: grid;
 }
 
-.w-64 {
-  width: 16rem;
+.min-w-64 {
+  min-width: 16rem;
 }
 
 .max-w-3xl {

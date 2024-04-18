@@ -1,11 +1,17 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::{
     extract::State,
+    response::{sse::Event, Sse},
     routing::{get, post},
     serve, Form, Router,
 };
+use futures::Stream;
 use maud::{html, Markup};
-use tokio::net::TcpListener;
+use tokio::{
+    net::TcpListener,
+    sync::broadcast::{self, Sender},
+};
+use tokio_stream::{wrappers::BroadcastStream, StreamExt};
 use tower_livereload::LiveReloadLayer;
 
 use crate::{
@@ -23,18 +29,24 @@ use self::static_assets::static_handler;
 #[derive(Clone)]
 pub(crate) struct App {
     todo_repo: TodoRepository,
+    todo_channel: Sender<Todo>,
 }
 
 impl App {
     pub fn new(todo_repo: TodoRepository) -> App {
-        App { todo_repo }
+        let (todo_channel, _) = broadcast::channel::<Todo>(256);
+        App {
+            todo_repo,
+            todo_channel,
+        }
     }
 
     pub async fn serve_api(self, config: &Config) -> Result<()> {
         let mut router = Router::new()
             .route("/static/*file", get(static_handler))
             .route("/", get(index_page))
-            .route("/todos", post(post_todos))
+            .route("/todos", post(post_todo))
+            .route("/todo-stream", get(todo_stream))
             .with_state(self);
         if let Environment::Dev = config.environment {
             router = router.layer(LiveReloadLayer::new());
@@ -68,7 +80,8 @@ async fn index_page(State(app): State<App>) -> ApiResult {
             div class="flex justify-center" {
                 (todo_form(None, None))
             }
-            ul #todos class="grid grid-cols-3 gap-4" {
+            ul #todos hx-sse="connect:/todo-stream swap:message" hx-swap="afterbegin"
+                class="grid grid-cols-3 gap-4" {
                 @for todo in &todos {
                     (todo_item(todo))
                 }
@@ -79,7 +92,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
     .to_response()
 }
 
-async fn post_todos(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
+async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
     if let Some(errors) = todo.validate() {
         return todo_form(Some(todo), Some(errors)).to_response();
     }
@@ -88,12 +101,30 @@ async fn post_todos(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult
         .add_todo(&todo)
         .context("Failed to add todo")
         .to_server_error()?;
+    app.todo_channel
+        .send(todo.clone())
+        .map_err(|err| anyhow!("Failed to send new todo on channel: {err}"))
+        .to_server_error()?;
 
-    html! {
-        (todo_item(&todo))
-        (todo_form(Some(Todo { content: "".to_string(), author: todo.author }), None))
-    }
+    todo_form(
+        Some(Todo {
+            content: "".to_string(),
+            author: todo.author,
+        }),
+        None,
+    )
     .to_response()
+}
+
+async fn todo_stream(State(app): State<App>) -> Sse<impl Stream<Item = Result<Event>>> {
+    let receiver = app.todo_channel.subscribe();
+
+    Sse::new(
+        BroadcastStream::new(receiver).map(|receive_result| -> Result<Event> {
+            let todo = receive_result.context("Failed to receive todo from channel")?;
+            Ok(Event::default().data(todo_item(&todo).into_string()))
+        }),
+    )
 }
 
 fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
@@ -127,8 +158,7 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                 }
             }
             div class="flex justify-center" {
-                button hx-post="/todos" hx-target="#todos" hx-swap="afterbegin"
-                    class="bg-blue-600 p-2 rounded text-white" {
+                button hx-post="/todos" class="bg-blue-600 p-2 rounded text-white" {
                     "Create todo"
                 }
             }
@@ -153,7 +183,7 @@ fn error_popups() -> Markup {
     html! {
         div #error-popups class="absolute bottom-4 right-4 flex flex-col gap-4" {}
         template #error-popup {
-            div class="bg-red-700 text-white flex flex-col gap-3 p-3 w-64" {
+            div class="bg-red-700 text-white flex flex-col gap-3 p-3 min-w-64" {
                 div class="flex gap-1 font-bold" {
                     div class="flex-grow" {
                         "Error"

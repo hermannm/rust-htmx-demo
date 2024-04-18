@@ -12,9 +12,11 @@ anyhow = "1.0.82"
 axum = { version = "0.7.5", features = ["macros"] }
 dotenvy = "0.15.7"
 envy = "0.4.2"
+futures = "0.3.30"
 maud = { version = "0.26.0", features = ["axum"] }
 mime_guess = "2.0.4"
 rust-embed = { version = "8.3.0", features = ["axum"] }
 serde = { version = "1.0.198", features = ["derive"] }
 tokio = { version = "1.37.0", features = ["full"] }
+tokio-stream = { version = "0.1.15", features = ["sync"] }
 tower-livereload = "0.9.2"
