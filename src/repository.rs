@@ -32,4 +32,30 @@ impl TodoRepository {
         todos.push(todo.clone());
         Ok(())
     }
+
+    pub fn add_examples(&self) -> Result<()> {
+        let mut todos = self
+            .todos
+            .write()
+            .map_err(|err| anyhow!("Failed to acquire lock on todos: {err}"))?;
+        todos.extend_from_slice(&[
+            Todo {
+                content: "Initialize Cargo project".to_string(),
+                author: "hermannm".to_string(),
+            },
+            Todo {
+                content: "Create basic todo app".to_string(),
+                author: "hermannm".to_string(),
+            },
+            Todo {
+                content: "Set up Tailwind CSS".to_string(),
+                author: "hermannm".to_string(),
+            },
+            Todo {
+                content: "Add example todos".to_string(),
+                author: "hermannm".to_string(),
+            },
+        ]);
+        Ok(())
+    }
 }
