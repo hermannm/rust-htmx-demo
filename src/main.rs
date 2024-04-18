@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let config = Config::load().context("Failed to load config")?;
 
     let todo_repo = TodoRepository::new();
-    if let Environment::Dev = config.env {
+    if let Environment::Dev = config.environment {
         todo_repo
             .add_examples()
             .context("Failed to add example todos")?;

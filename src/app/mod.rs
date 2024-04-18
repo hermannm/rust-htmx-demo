@@ -36,7 +36,7 @@ impl App {
             .route("/", get(index_page))
             .route("/todos", post(post_todos))
             .with_state(self);
-        if let Environment::Dev = config.env {
+        if let Environment::Dev = config.environment {
             router = router.layer(LiveReloadLayer::new());
         }
 

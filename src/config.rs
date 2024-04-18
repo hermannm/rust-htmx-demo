@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub(crate) struct Config {
-    pub env: Environment,
+    pub environment: Environment,
     #[serde(default = "default_port")]
     pub port: u16,
 }
