@@ -41,6 +41,7 @@ impl App {
         }
 
         let listener = TcpListener::bind(("0.0.0.0", config.port)).await?;
+        println!("Serving app on port {}", config.port);
         serve(listener, router).await?;
         Ok(())
     }
