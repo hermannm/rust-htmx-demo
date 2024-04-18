@@ -8,7 +8,11 @@ use maud::{html, Markup};
 use tokio::net::TcpListener;
 use tower_livereload::LiveReloadLayer;
 
-use crate::{repository::TodoRepository, todo::Todo};
+use crate::{
+    config::{Config, Environment},
+    repository::TodoRepository,
+    todo::Todo,
+};
 
 mod static_assets;
 mod utils;
@@ -26,14 +30,17 @@ impl App {
         App { todo_repo }
     }
 
-    pub async fn serve_api(self, port: u16) -> Result<()> {
-        let router = Router::new()
+    pub async fn serve_api(self, config: &Config) -> Result<()> {
+        let mut router = Router::new()
             .route("/static/*file", get(static_handler))
             .route("/", get(index_page))
             .route("/todos", post(post_todos))
-            .with_state(self)
-            .layer(LiveReloadLayer::new());
-        let listener = TcpListener::bind(("0.0.0.0", port)).await?;
+            .with_state(self);
+        if let Environment::Dev = config.env {
+            router = router.layer(LiveReloadLayer::new());
+        }
+
+        let listener = TcpListener::bind(("0.0.0.0", config.port)).await?;
         serve(listener, router).await?;
         Ok(())
     }
