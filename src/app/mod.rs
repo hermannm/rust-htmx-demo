@@ -11,7 +11,7 @@ use tower_livereload::LiveReloadLayer;
 use crate::{
     config::{Config, Environment},
     repository::TodoRepository,
-    todo::Todo,
+    todo::{Todo, TodoErrors},
 };
 
 mod static_assets;
@@ -64,26 +64,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
                 "Todos"
             }
             div class="flex justify-center" {
-                form class="flex flex-col gap-3 max-w-96" {
-                    div class="flex flex-col gap-1" {
-                        label class="font-bold" for="content" {
-                            "Todo:"
-                        }
-                        textarea name="content" cols="40" rows="5" class="border border-gray-700" {}
-                    }
-                    div class="flex gap-1" {
-                        label class="font-bold" for="author" {
-                            "Your name:"
-                        }
-                        input type="text" name="author" class="border border-gray-700 flex-grow";
-                    }
-                    div class="flex justify-center" {
-                        button hx-post="/todos" hx-target="#todos" hx-swap="afterbegin" type="submit"
-                            class="bg-blue-600 p-2 rounded text-white" {
-                            "Create todo"
-                        }
-                    }
-                }
+                (todo_form(None, None))
             }
             ul #todos class="grid grid-cols-3 gap-4" {
                 @for todo in &todos {
@@ -96,12 +77,60 @@ async fn index_page(State(app): State<App>) -> ApiResult {
 }
 
 async fn post_todos(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
+    if let Some(errors) = todo.validate() {
+        return todo_form(Some(todo), Some(errors)).to_response();
+    }
+
     app.todo_repo
         .add_todo(&todo)
         .context("Failed to add todo")
         .to_server_error()?;
 
-    todo_item(&todo).to_response()
+    html! {
+        (todo_item(&todo))
+        (todo_form(Some(Todo { content: "".to_string(), author: todo.author }), None))
+    }
+    .to_response()
+}
+
+fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
+    let todo = form_data.unwrap_or_else(Todo::empty);
+    html! {
+        form #todo-form hx-swap-oob="true" class="flex flex-col gap-3 max-w-96" {
+            div class="flex flex-col gap-1" {
+                label class="font-bold" for="content" {
+                    "Todo:"
+                }
+                textarea #todo-content-input name="content" cols="40" rows="5" value=(todo.content)
+                    class="border border-gray-700 p-2 rounded" {}
+                @if let Some(content_err) = errors.as_ref().and_then(|errors| errors.content) {
+                    div class="text-red-600 font-bold flex justify-center" {
+                        (content_err)
+                    }
+                }
+            }
+            div class="flex flex-col gap-1" {
+                div class="flex gap-1 items-center" {
+                    label class="font-bold" for="author" {
+                        "Your name:"
+                    }
+                    input type="text" name="author" value=(todo.author)
+                        class="border border-gray-700 flex-grow p-2 rounded";
+                }
+                @if let Some(author_err) = errors.as_ref().and_then(|errors| errors.author) {
+                    div class="text-red-600 font-bold flex justify-center" {
+                        (author_err)
+                    }
+                }
+            }
+            div class="flex justify-center" {
+                button hx-post="/todos" hx-target="#todos" hx-swap="afterbegin"
+                    class="bg-blue-600 p-2 rounded text-white" {
+                    "Create todo"
+                }
+            }
+        }
+    }
 }
 
 fn todo_item(todo: &Todo) -> Markup {
