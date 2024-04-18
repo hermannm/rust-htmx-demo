@@ -4,19 +4,24 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub(crate) struct Config {
+    #[serde(default = "default_env")]
     pub environment: Environment,
     #[serde(default = "default_port")]
     pub port: u16,
-}
-
-const fn default_port() -> u16 {
-    8000
 }
 
 #[derive(Deserialize)]
 pub(crate) enum Environment {
     Prod,
     Dev,
+}
+
+const fn default_env() -> Environment {
+    Environment::Dev
+}
+
+const fn default_port() -> u16 {
+    8000
 }
 
 impl Config {
