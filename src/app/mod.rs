@@ -57,6 +57,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
         head {
             title { "Rust HTMX Demo App" }
             script src="/static/htmx-1.9.12.js" {}
+            script defer src="/static/script.js" {}
             link rel="stylesheet" href="/static/styles.css";
         }
         body class="max-w-3xl mx-auto my-5 bg-slate-300" {
@@ -71,6 +72,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
                     (todo_item(todo))
                 }
             }
+            (error_popups())
         }
     }
     .to_response()
@@ -141,6 +143,25 @@ fn todo_item(todo: &Todo) -> Markup {
             }
             div class="flex justify-end text-gray-400" {
                 (todo.author)
+            }
+        }
+    }
+}
+
+fn error_popups() -> Markup {
+    html! {
+        div #error-popups class="absolute bottom-4 right-4 flex flex-col gap-4" {}
+        template #error-popup {
+            div class="bg-red-700 text-white flex flex-col gap-3 p-3 w-64" {
+                div class="flex gap-1 font-bold" {
+                    div class="flex-grow" {
+                        "Error"
+                    }
+                    button #error-popup-closer {
+                        "X"
+                    }
+                }
+                pre #error-popup-content {}
             }
         }
     }
