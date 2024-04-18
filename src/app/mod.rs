@@ -6,6 +6,7 @@ use axum::{
 };
 use maud::{html, Markup};
 use tokio::net::TcpListener;
+use tower_livereload::LiveReloadLayer;
 
 use crate::{repository::TodoRepository, todo::Todo};
 
@@ -30,7 +31,8 @@ impl App {
             .route("/static/*file", get(static_handler))
             .route("/", get(index_page))
             .route("/todos", post(post_todos))
-            .with_state(self);
+            .with_state(self)
+            .layer(LiveReloadLayer::new());
         let listener = TcpListener::bind(("0.0.0.0", port)).await?;
         serve(listener, router).await?;
         Ok(())
