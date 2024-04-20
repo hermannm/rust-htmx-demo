@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use axum::{
     extract::State,
+    http::Request,
     response::{sse::Event, Sse},
     routing::{get, post},
     serve, Form, Router,
@@ -12,7 +13,9 @@ use tokio::{
     sync::broadcast::{self, Sender},
 };
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
+use tower_http::trace::TraceLayer;
 use tower_livereload::LiveReloadLayer;
+use tracing::{info, Level};
 
 use crate::{
     config::{Config, Environment},
@@ -47,13 +50,22 @@ impl App {
             .route("/", get(index_page))
             .route("/todos", post(post_todo))
             .route("/todo-stream", get(todo_stream))
-            .with_state(self);
+            .with_state(self)
+            .layer(
+                TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+                    tracing::span!(
+                        Level::DEBUG,
+                        "request",
+                        path = %format!("{} {}", request.method(), request.uri()),
+                    )
+                }),
+            );
         if let Environment::Dev = config.environment {
             router = router.layer(LiveReloadLayer::new());
         }
 
         let listener = TcpListener::bind(("0.0.0.0", config.port)).await?;
-        println!("Serving app on port {}", config.port);
+        info!(port = config.port, env = ?config.environment, "Serving app");
         serve(listener, router).await?;
         Ok(())
     }

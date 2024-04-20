@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use maud::Markup;
+use tracing::error;
 
 pub type ApiResult = Result<Response, Response>;
 
@@ -14,11 +15,17 @@ pub trait ToApiError<T> {
 
 impl<T> ToApiError<T> for Result<T> {
     fn to_server_error(self) -> Result<T, Response> {
-        self.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response())
+        self.map_err(|err| {
+            error!("{err}");
+            (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response()
+        })
     }
 
     fn to_client_error(self) -> Result<T, Response> {
-        self.map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()).into_response())
+        self.map_err(|err| {
+            error!("{err}");
+            (StatusCode::BAD_REQUEST, err.to_string()).into_response()
+        })
     }
 }
 

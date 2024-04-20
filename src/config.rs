@@ -10,7 +10,7 @@ pub(crate) struct Config {
     pub port: u16,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub(crate) enum Environment {
     Prod,
     Dev,
