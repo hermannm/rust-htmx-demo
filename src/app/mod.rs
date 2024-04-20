@@ -171,7 +171,8 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                 }
             }
             div class="flex justify-center" {
-                button hx-post="/todos" class="bg-blue-600 p-2 rounded text-white" {
+                button hx-post="/todos" hx-disabled-elt="this"
+                    class="bg-blue-600 disabled:bg-gray-500 p-2 rounded text-white" {
                     "Create todo"
                 }
             }
