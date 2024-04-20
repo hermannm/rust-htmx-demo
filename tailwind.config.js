@@ -3,17 +3,7 @@ export default {
   content: ["./src/app/**/*.rs"],
   theme: {
     fontFamily: {
-      main: ["Roboto Mono", "Consolas", "Courier New", "sans-serif"],
-    },
-    extend: {
-      colors: {
-        /** From https://github.com/morhetz/gruvbox#palette */
-        "gruvbox-fg": "#ebdbb2",
-        "gruvbox-bg0": "#282828",
-        "gruvbox-bg2": "#504945",
-        "gruvbox-bg3": "#665c54",
-        "gruvbox-gray": "#928374",
-      },
+      main: ["sans-serif"],
     },
     screens: {
       xs: "480px",
