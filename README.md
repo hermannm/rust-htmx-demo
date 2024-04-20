@@ -9,8 +9,8 @@ for styling.
 
 1. Install [Rust](https://www.rust-lang.org/tools/install) and
    [Node.js](https://nodejs.org/en/download)
-2. Run `npm ci` to install Tailwind
-3. Run `cargo run`
+2. Run `npm ci` (required for Tailwind CSS generation and TypeScript compilation)
+3. Run `cargo run` (this runs Tailwind and TypeScript as part of the build process)
 
 For live reload in development, install [cargo-watch](https://crates.io/crates/cargo-watch) and run
 `cargo watch -c -w src -x run`.
