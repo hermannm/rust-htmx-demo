@@ -70,6 +70,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
         head {
             title { "Rust HTMX Demo App" }
             script src="/static/htmx-1.9.12.js" {}
+            script src="/static/htmx-sse-1.9.12.js" {}
             script defer src="/static/script.js" {}
             link rel="stylesheet" href="/static/styles.css";
         }
@@ -80,8 +81,8 @@ async fn index_page(State(app): State<App>) -> ApiResult {
             div class="flex justify-center" {
                 (todo_form(None, None))
             }
-            ul #todos hx-sse="connect:/todo-stream swap:message" hx-swap="afterbegin"
-                class="grid grid-cols-3 gap-4" {
+            ul #todos hx-ext="sse" sse-connect="/todo-stream" sse-swap="message"
+                hx-swap="afterbegin" class="grid grid-cols-3 gap-4" {
                 @for todo in &todos {
                     (todo_item(todo))
                 }
