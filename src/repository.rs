@@ -24,12 +24,12 @@ impl TodoRepository {
         Ok(todos.iter().rev().cloned().collect::<Vec<Todo>>())
     }
 
-    pub fn add_todo(&self, todo: &Todo) -> Result<()> {
+    pub fn add_todo(&self, todo: Todo) -> Result<()> {
         let mut todos = self
             .todos
             .write()
             .map_err(|err| anyhow!("Failed to acquire lock on todos: {err}"))?;
-        todos.push(todo.clone());
+        todos.push(todo);
         Ok(())
     }
 

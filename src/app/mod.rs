@@ -111,7 +111,7 @@ async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult 
     }
 
     app.todo_repo
-        .add_todo(&todo)
+        .add_todo(todo.clone())
         .context("Failed to add todo")
         .to_server_error()?;
     app.todo_channel
