@@ -1,0 +1,8 @@
+{
+  "include": ["./src/scripts/**/*"],
+  "compilerOptions": {
+    "outFile": "static/script.js",
+    "target": "ES6",
+    "removeComments": true
+  }
+}
