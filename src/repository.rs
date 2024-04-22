@@ -2,11 +2,11 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::{anyhow, Result};
 
-use crate::todo::Todo;
+use crate::todo::{Todo, Validated};
 
 #[derive(Clone)]
 pub(crate) struct TodoRepository {
-    todos: Arc<RwLock<Vec<Todo>>>,
+    todos: Arc<RwLock<Vec<Todo<Validated>>>>,
 }
 
 impl TodoRepository {
@@ -16,15 +16,19 @@ impl TodoRepository {
         }
     }
 
-    pub fn get_todos(&self) -> Result<Vec<Todo>> {
+    pub fn get_todos(&self) -> Result<Vec<Todo<Validated>>> {
         let todos = self
             .todos
             .read()
             .map_err(|err| anyhow!("Failed to acquire lock on todos: {err}"))?;
-        Ok(todos.iter().rev().cloned().collect::<Vec<Todo>>())
+        Ok(todos
+            .iter()
+            .rev()
+            .cloned()
+            .collect::<Vec<Todo<Validated>>>())
     }
 
-    pub fn add_todo(&self, todo: Todo) -> Result<()> {
+    pub fn add_todo(&self, todo: Todo<Validated>) -> Result<()> {
         let mut todos = self
             .todos
             .write()
@@ -38,24 +42,16 @@ impl TodoRepository {
             .todos
             .write()
             .map_err(|err| anyhow!("Failed to acquire lock on todos: {err}"))?;
-        todos.extend_from_slice(&[
-            Todo {
-                content: "Initialize Cargo project".to_string(),
-                author: "hermannm".to_string(),
-            },
-            Todo {
-                content: "Create basic todo app".to_string(),
-                author: "hermannm".to_string(),
-            },
-            Todo {
-                content: "Set up Tailwind CSS".to_string(),
-                author: "hermannm".to_string(),
-            },
-            Todo {
-                content: "Add example todos".to_string(),
-                author: "hermannm".to_string(),
-            },
-        ]);
+        let examples = [
+            Todo::new(
+                "Initialize Cargo project".to_string(),
+                "hermannm".to_string(),
+            ),
+            Todo::new("Create basic todo app".to_string(), "hermannm".to_string()),
+            Todo::new("Set up Tailwind CSS".to_string(), "hermannm".to_string()),
+            Todo::new("Add example todos".to_string(), "hermannm".to_string()),
+        ];
+        todos.extend_from_slice(&examples.map(|example| example.validate().unwrap()));
         Ok(())
     }
 }

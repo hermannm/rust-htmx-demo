@@ -20,7 +20,7 @@ use tracing::{info, Level};
 use crate::{
     config::{Config, Environment},
     repository::TodoRepository,
-    todo::{Todo, TodoErrors},
+    todo::{NotValidated, Todo, TodoErrors, Validated, ValidationState},
 };
 
 mod static_assets;
@@ -32,12 +32,12 @@ use self::static_assets::static_handler;
 #[derive(Clone)]
 pub(crate) struct App {
     todo_repo: TodoRepository,
-    todo_channel: Sender<Todo>,
+    todo_channel: Sender<Todo<Validated>>,
 }
 
 impl App {
     pub fn new(todo_repo: TodoRepository) -> App {
-        let (todo_channel, _) = broadcast::channel::<Todo>(256);
+        let (todo_channel, _) = broadcast::channel::<Todo<Validated>>(256);
         App {
             todo_repo,
             todo_channel,
@@ -91,7 +91,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
                 "Todos"
             }
             div class="flex justify-center" {
-                (todo_form(None, None))
+                (todo_form(&Todo::empty(), None))
             }
             ul id="todos" hx-ext="sse" sse-connect="/todo-stream" sse-swap="message"
                 hx-swap="afterbegin" class="grid grid-cols-3 gap-4" {
@@ -105,28 +105,24 @@ async fn index_page(State(app): State<App>) -> ApiResult {
     .to_response()
 }
 
-async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
-    if let Some(errors) = todo.validate() {
-        return todo_form(Some(todo), Some(errors)).to_response();
-    }
+async fn post_todo(State(app): State<App>, Form(todo): Form<Todo<NotValidated>>) -> ApiResult {
+    let validated_todo = match todo.validate() {
+        Ok(todo) => todo,
+        Err((todo, errors)) => {
+            return todo_form(&todo, Some(errors)).to_response();
+        }
+    };
 
     app.todo_repo
-        .add_todo(todo.clone())
+        .add_todo(validated_todo.clone())
         .context("Failed to add todo")
         .to_server_error()?;
     app.todo_channel
-        .send(todo.clone())
+        .send(validated_todo.clone())
         .map_err(|err| anyhow!("Failed to send new todo on channel: {err}"))
         .to_server_error()?;
 
-    todo_form(
-        Some(Todo {
-            content: "".to_string(),
-            author: todo.author,
-        }),
-        None,
-    )
-    .to_response()
+    todo_form(&Todo::new("".to_string(), validated_todo.author), None).to_response()
 }
 
 async fn todo_stream(State(app): State<App>) -> Sse<impl Stream<Item = Result<Event>>> {
@@ -140,8 +136,7 @@ async fn todo_stream(State(app): State<App>) -> Sse<impl Stream<Item = Result<Ev
     )
 }
 
-fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
-    let todo = form_data.unwrap_or_else(Todo::empty);
+fn todo_form(form_data: &Todo<impl ValidationState>, errors: Option<TodoErrors>) -> Markup {
     html! {
         form id="todo-form" hx-swap-oob="true" class="flex flex-col gap-3 max-w-96" {
             div class="flex flex-col gap-1" {
@@ -149,7 +144,7 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                     "Todo:"
                 }
                 textarea id="todo-content-input" name="content" cols="40" rows="5"
-                    value=(todo.content) class="border border-gray-700 p-2 rounded" {}
+                    value=(form_data.content) class="border border-gray-700 p-2 rounded" {}
                 @if let Some(content_err) = errors.as_ref().and_then(|errors| errors.content) {
                     div class="text-red-600 font-bold flex justify-center" {
                         (content_err)
@@ -161,7 +156,7 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                     label for="author" class="font-bold" {
                         "Your name:"
                     }
-                    input type="text" name="author" value=(todo.author)
+                    input type="text" name="author" value=(form_data.author)
                         class="border border-gray-700 flex-grow p-2 rounded";
                 }
                 @if let Some(author_err) = errors.as_ref().and_then(|errors| errors.author) {
@@ -180,7 +175,7 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
     }
 }
 
-fn todo_item(todo: &Todo) -> Markup {
+fn todo_item(todo: &Todo<impl ValidationState>) -> Markup {
     html! {
         li class="bg-slate-700 text-white p-2 flex flex-col gap-4" {
             div class="flex-grow" {
