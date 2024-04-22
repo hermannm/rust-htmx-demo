@@ -93,7 +93,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
             div class="flex justify-center" {
                 (todo_form(None, None))
             }
-            ul #todos hx-ext="sse" sse-connect="/todo-stream" sse-swap="message"
+            ul id="todos" hx-ext="sse" sse-connect="/todo-stream" sse-swap="message"
                 hx-swap="afterbegin" class="grid grid-cols-3 gap-4" {
                 @for todo in &todos {
                     (todo_item(todo))
@@ -143,13 +143,13 @@ async fn todo_stream(State(app): State<App>) -> Sse<impl Stream<Item = Result<Ev
 fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
     let todo = form_data.unwrap_or_else(Todo::empty);
     html! {
-        form #todo-form hx-swap-oob="true" class="flex flex-col gap-3 max-w-96" {
+        form id="todo-form" hx-swap-oob="true" class="flex flex-col gap-3 max-w-96" {
             div class="flex flex-col gap-1" {
-                label class="font-bold" for="content" {
+                label for="content" class="font-bold" {
                     "Todo:"
                 }
-                textarea #todo-content-input name="content" cols="40" rows="5" value=(todo.content)
-                    class="border border-gray-700 p-2 rounded" {}
+                textarea id="todo-content-input" name="content" cols="40" rows="5"
+                    value=(todo.content) class="border border-gray-700 p-2 rounded" {}
                 @if let Some(content_err) = errors.as_ref().and_then(|errors| errors.content) {
                     div class="text-red-600 font-bold flex justify-center" {
                         (content_err)
@@ -158,7 +158,7 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
             }
             div class="flex flex-col gap-1" {
                 div class="flex gap-1 items-center" {
-                    label class="font-bold" for="author" {
+                    label for="author" class="font-bold" {
                         "Your name:"
                     }
                     input type="text" name="author" value=(todo.author)
@@ -195,18 +195,18 @@ fn todo_item(todo: &Todo) -> Markup {
 
 fn error_popups() -> Markup {
     html! {
-        div #error-popups class="absolute bottom-4 right-4 flex flex-col gap-4" {}
-        template #error-popup {
+        div id="error-popups" class="absolute bottom-4 right-4 flex flex-col gap-4" {}
+        template id="error-popup" {
             div class="bg-red-700 text-white flex flex-col gap-3 p-3 min-w-64" {
                 div class="flex gap-1 font-bold" {
                     div class="flex-grow" {
                         "Error"
                     }
-                    button #error-popup-closer {
+                    button id="error-popup-closer" {
                         "X"
                     }
                 }
-                pre #error-popup-content {}
+                pre id="error-popup-content" {}
             }
         }
     }
