@@ -106,7 +106,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
 }
 
 async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
-    if let Some(errors) = todo.validate() {
+    if let Err(errors) = todo.validate() {
         return todo_form(Some(todo), Some(errors)).to_response();
     }
 

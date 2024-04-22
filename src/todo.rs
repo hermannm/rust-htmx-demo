@@ -19,7 +19,7 @@ impl Todo {
         }
     }
 
-    pub fn validate(&self) -> Option<TodoErrors> {
+    pub fn validate(&self) -> Result<(), TodoErrors> {
         let mut errors = TodoErrors {
             content: None,
             author: None,
@@ -36,9 +36,9 @@ impl Todo {
         }
 
         if is_err {
-            Some(errors)
+            Err(errors)
         } else {
-            None
+            Ok(())
         }
     }
 }
