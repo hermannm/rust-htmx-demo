@@ -1,47 +1,25 @@
-use std::marker::PhantomData;
-
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct Todo<V: ValidationState> {
+#[derive(Clone, Serialize, Deserialize)]
+pub(crate) struct Todo {
     pub content: String,
     pub author: String,
-    #[serde(skip_serializing, default)]
-    marker: PhantomData<V>,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum Validated {}
-#[derive(Clone, Debug)]
-pub(crate) enum NotValidated {}
-pub(crate) trait ValidationState {}
-impl ValidationState for Validated {}
-impl ValidationState for NotValidated {}
-
-#[derive(Debug)]
 pub(crate) struct TodoErrors {
     pub content: Option<&'static str>,
     pub author: Option<&'static str>,
 }
 
-impl Todo<NotValidated> {
-    pub fn empty() -> Self {
+impl Todo {
+    pub fn empty() -> Todo {
         Todo {
             content: "".to_string(),
             author: "".to_string(),
-            marker: PhantomData,
         }
     }
 
-    pub fn new(content: String, author: String) -> Self {
-        Todo {
-            content,
-            author,
-            marker: PhantomData,
-        }
-    }
-
-    pub fn validate(self) -> Result<Todo<Validated>, (Todo<NotValidated>, TodoErrors)> {
+    pub fn validate(&self) -> Option<TodoErrors> {
         let mut errors = TodoErrors {
             content: None,
             author: None,
@@ -58,13 +36,9 @@ impl Todo<NotValidated> {
         }
 
         if is_err {
-            Err((self, errors))
+            Some(errors)
         } else {
-            Ok(Todo {
-                content: self.content,
-                author: self.author,
-                marker: PhantomData,
-            })
+            None
         }
     }
 }
