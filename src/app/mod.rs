@@ -91,7 +91,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
                 "Todos"
             }
             div class="flex justify-center" {
-                (todo_form(None, None))
+                (todo_form(&Todo::empty(), None))
             }
             ul id="todos" hx-ext="sse" sse-connect="/todo-stream" sse-swap="message"
                 hx-swap="afterbegin" class="grid grid-cols-3 gap-4" {
@@ -107,7 +107,7 @@ async fn index_page(State(app): State<App>) -> ApiResult {
 
 async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult {
     if let Err(errors) = todo.validate() {
-        return todo_form(Some(todo), Some(errors)).to_response();
+        return todo_form(&todo, Some(&errors)).to_response();
     }
 
     app.todo_repo
@@ -120,10 +120,10 @@ async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult 
         .to_server_error()?;
 
     todo_form(
-        Some(Todo {
+        &Todo {
             content: "".to_string(),
             author: todo.author,
-        }),
+        },
         None,
     )
     .to_response()
@@ -140,8 +140,7 @@ async fn todo_stream(State(app): State<App>) -> Sse<impl Stream<Item = Result<Ev
     )
 }
 
-fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
-    let todo = form_data.unwrap_or_else(Todo::empty);
+fn todo_form(form_data: &Todo, errors: Option<&TodoErrors>) -> Markup {
     html! {
         form id="todo-form" hx-swap-oob="true" class="flex flex-col gap-3 max-w-96" {
             div class="flex flex-col gap-1" {
@@ -149,8 +148,8 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                     "Todo:"
                 }
                 textarea id="todo-content-input" name="content" cols="40" rows="5"
-                    value=(todo.content) class="border border-gray-700 p-2 rounded" {}
-                @if let Some(content_err) = errors.as_ref().and_then(|errors| errors.content) {
+                    value=(form_data.content) class="border border-gray-700 p-2 rounded" {}
+                @if let Some(content_err) = errors.and_then(|errors| errors.content) {
                     div class="text-red-600 font-bold flex justify-center" {
                         (content_err)
                     }
@@ -161,10 +160,10 @@ fn todo_form(form_data: Option<Todo>, errors: Option<TodoErrors>) -> Markup {
                     label for="author" class="font-bold" {
                         "Your name:"
                     }
-                    input type="text" name="author" value=(todo.author)
+                    input type="text" name="author" value=(form_data.author)
                         class="border border-gray-700 flex-grow p-2 rounded";
                 }
-                @if let Some(author_err) = errors.as_ref().and_then(|errors| errors.author) {
+                @if let Some(author_err) = errors.and_then(|errors| errors.author) {
                     div class="text-red-600 font-bold flex justify-center" {
                         (author_err)
                     }
