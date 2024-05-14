@@ -5,6 +5,7 @@ use std::{env, process::Command};
  * - Compiles our TypeScript files from src/scripts to static/script.js
  */
 fn main() -> Result<(), String> {
+    println!("cargo:rerun-if-changed=migrations");
     println!("cargo::rerun-if-changed=src/app/");
     println!("cargo::rerun-if-changed=src/scripts/");
 

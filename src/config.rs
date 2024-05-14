@@ -8,6 +8,8 @@ pub(crate) struct Config {
     pub environment: Environment,
     #[serde(default = "default_port")]
     pub port: u16,
+    #[serde(default = "default_database_url")]
+    pub database_url: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -22,6 +24,10 @@ const fn default_env() -> Environment {
 
 const fn default_port() -> u16 {
     8000
+}
+
+fn default_database_url() -> String {
+    "postgres://postgres:password@localhost/postgres".to_string()
 }
 
 impl Config {

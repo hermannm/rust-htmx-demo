@@ -19,7 +19,7 @@ use tracing::{info, Level};
 
 use crate::{
     config::{Config, Environment},
-    repository::TodoRepository,
+    db::TodoDatabase,
     todo::{Todo, TodoErrors},
 };
 
@@ -31,15 +31,15 @@ use self::static_assets::static_handler;
 
 #[derive(Clone)]
 pub(crate) struct App {
-    todo_repo: TodoRepository,
+    todo_db: TodoDatabase,
     todo_channel: Sender<Todo>,
 }
 
 impl App {
-    pub fn new(todo_repo: TodoRepository) -> App {
+    pub fn new(todo_repo: TodoDatabase) -> App {
         let (todo_channel, _) = broadcast::channel::<Todo>(256);
         App {
-            todo_repo,
+            todo_db: todo_repo,
             todo_channel,
         }
     }
@@ -73,8 +73,9 @@ impl App {
 
 async fn index_page(State(app): State<App>) -> ApiResult {
     let todos = app
-        .todo_repo
+        .todo_db
         .get_todos()
+        .await
         .context("Failed to get todos")
         .to_server_error()?;
 
@@ -110,8 +111,9 @@ async fn post_todo(State(app): State<App>, Form(todo): Form<Todo>) -> ApiResult 
         return todo_form(&todo, Some(&errors)).to_response();
     }
 
-    app.todo_repo
+    app.todo_db
         .add_todo(todo.clone())
+        .await
         .context("Failed to add todo")
         .to_server_error()?;
     app.todo_channel
